@@ -59,7 +59,7 @@ __zbnc_npm_install_completion() {
 
     #npm i ab<tab>
     if (( $#words >= 3 )) && [[ $lastWord != '' ]] && (( $#lastWord >= 2)); then
-        searchLines=("${(f@)$(npm search $words[-1])}")
+        searchLines=("${(f@)$(npm search --no-progress $words[-1] 2>/dev/null)}")
 
         for needle in $searchLines[@]; do
             if [[ $needle == (#b)([^[:space:]]##)[[:space:]]##(*) ]]; then
