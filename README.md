@@ -11,6 +11,14 @@
 
 ## Installation
 
+## Install for Zinit
+> `~/.zshrc`
+```sh
+source "$HOME/.zinit/bin/zinit.zsh"
+zinit ice lucid nocompile
+zinit load lukechilds/zsh-better-npm-completions
+```
+
 ### Using [Antigen](https://github.com/zsh-users/antigen)
 
 Bundle `zsh-better-npm-completion` in your `.zshrc`
