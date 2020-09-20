@@ -48,28 +48,26 @@ __zbnc_parse_package_json_for_deps() {
 
 __zbnc_npm_install_completion() {
 
-    local -a searchLines
     local -a cachedLines
-    local -a npmSearchPackages
-    local package desc lastWord out
-    lastWord=${${words[-1]}// /}
+    local desc lastWord out
 
     #npm i -<tab>
-    [[ $lastWord == -* ]] && return
+    [[ $PREFIX == -* ]] && return
+
+    local npm_cache_file gems_ary
+    local -a tmp_ary
 
     #npm i ab<tab>
-    if (( $#words >= 3 )) && [[ $lastWord != '' ]] && (( $#lastWord >= 2)); then
-        searchLines=("${(f@)$(npm search --no-progress $PREFIX 2>/dev/null)}")
+    if (( $#PREFIX >= 2)); then
+        npm_cache_file="npm_${PREFIX}_cache"
+        if _cache_invalid $npm_cache_file || ! _retrieve_cache $npm_cache_file; then
+            while read tag desc; do
+                tmp_ary+=("${(q)tag}:${(q)desc}")
+            done < <(npm search --no-progress $PREFIX 2>/dev/null | sed -n '2,$p')
+            _store_cache $npm_cache_file tmp_ary
+        fi
+        _describe -t npm-search 'npm search packages' tmp_ary
 
-        for needle in $searchLines[@]; do
-            if [[ $needle == (#b)([^[:space:]]##)[[:space:]]##(*) ]]; then
-                npmSearchPackages+=("$match[1]:$match[2]")
-            else
-                echo "ERROR: npm search output: $needle is not in expected format." >&2
-            fi
-        done
-
-        _describe -t npm-search 'npm search packages' npmSearchPackages
         # Make sure we don't run default completion
         custom_completion=true
     fi
@@ -82,7 +80,6 @@ __zbnc_npm_install_completion() {
         # Make sure we don't run default completion
         custom_completion=true
     fi
-    set +x
 
 }
 
