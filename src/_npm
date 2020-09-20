@@ -131,7 +131,7 @@ __zbnc_default_npm_completion() {
         COMP_POINT=0 \
         npm completion -- "${words[@]}" \
         2>/dev/null)
-    }
+}
 
 _npm() {
 
@@ -141,18 +141,18 @@ _npm() {
   # Load custom completion commands
   case $words[2] in
       i|install)
-          __zbnc_npm_install_completion
+          __zbnc_npm_install_completion && return
           ;;
       r|uninstall)
-          __zbnc_npm_uninstall_completion
+          __zbnc_npm_uninstall_completion && return
           ;;
       run)
-          __zbnc_npm_run_completion
+          __zbnc_npm_run_completion && return
           ;;
   esac
 
   # Fall back to default completion if we haven't done a custom one
-  [[ $custom_completion = false ]] && __zbnc_default_npm_completion
+  [[ $custom_completion = false ]] && __zbnc_default_npm_completion && return
 }
 
 _npm "$@"
