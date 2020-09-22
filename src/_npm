@@ -3,10 +3,6 @@ __zbnc_npm_command_arg() {
     echo "${words[3]}"
 }
 
-__zbnc_list_cached_modules() {
-    command ls ~/.npm 2>/dev/null
-}
-
 __zbnc_recursively_look_for() {
     local filename="$1"
     local dir=$PWD
@@ -73,13 +69,10 @@ __zbnc_npm_install_completion() {
     fi
 
 
-    out="$(__zbnc_list_cached_modules)"
-    if [[ $out != "" ]];then
-        cachedLines=("${(ufA@)out}")
-        _wanted npm-cache expl 'cached npm packages' compadd -Q $cachedLines
-        # Make sure we don't run default completion
-        custom_completion=true
-    fi
+    cachedLines=("$HOME/".npm/*(/:t))
+    _wanted npm-cache expl 'cached npm packages' compadd -Q $cachedLines
+    # Make sure we don't run default completion
+    custom_completion=true
 
 }
 
