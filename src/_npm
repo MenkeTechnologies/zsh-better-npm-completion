@@ -56,7 +56,7 @@ __zbnc_npm_install_completion() {
     #npm i ab<tab>
     if (( $#PREFIX >= 2)); then
         npm_cache_file="npm_${PREFIX}_cache"
-        if _cache_invalid $npm_cache_file || ! _retrieve_cache $npm_cache_file; then
+        if ! _retrieve_cache $npm_cache_file; then
             while read tag desc; do
                 tmp_ary+=("${(q)tag}:${(q)desc}")
             done < <(npm search --no-progress $PREFIX 2>/dev/null | sed -n '2,$p')
