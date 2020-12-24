@@ -60,7 +60,9 @@ __zbnc_npm_install_completion() {
             while read tag desc; do
                 tmp_ary+=("${(q)tag}:${(q)desc}")
             done < <(npm search --no-progress $PREFIX 2>/dev/null | sed -n '2,$p')
-            _store_cache $npm_cache_file tmp_ary
+            if (( $#tmp_ary )); then
+                _store_cache $npm_cache_file tmp_ary
+            fi
         fi
         _describe -t npm-search 'npm search packages' tmp_ary
 
