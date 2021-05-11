@@ -1,4 +1,4 @@
-#compdef npm
+#compdef npm pnpm
 __zbnc_npm_command_arg() {
     echo "${words[3]}"
 }
