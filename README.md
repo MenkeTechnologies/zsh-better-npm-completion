@@ -1,5 +1,7 @@
 # zsh-better-npm-completion
 
+[![CI](https://github.com/MenkeTechnologies/zsh-better-npm-completion/actions/workflows/ci.yml/badge.svg)](https://github.com/MenkeTechnologies/zsh-better-npm-completion/actions/workflows/ci.yml)
+
 > Better completion for `npm`
 
 <img src="demo.gif" width="690">
