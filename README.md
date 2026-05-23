@@ -1,19 +1,44 @@
-# zsh-better-npm-completion
+```
+ ███████╗███████╗██╗  ██╗
+ ╚══███╔╝██╔════╝██║  ██║
+   ███╔╝ ███████╗███████║
+  ███╔╝  ╚════██║██╔══██║
+ ███████╗███████║██║  ██║
+ ╚══════╝╚══════╝╚═╝  ╚═╝
+       [ n p m ]
+```
 
 [![CI](https://github.com/MenkeTechnologies/zsh-better-npm-completion/actions/workflows/ci.yml/badge.svg)](https://github.com/MenkeTechnologies/zsh-better-npm-completion/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![zsh](https://img.shields.io/badge/zsh-plugin-cyan.svg)](https://github.com/MenkeTechnologies/zpwr)
+
+### `[BETTER NPM COMPLETION FOR ZSH // CACHE-AWARE INSTALL + DEP-AWARE UNINSTALL]`
+
+> *"`npm install <TAB>` recommends from cache. `npm uninstall <TAB>` recommends from package.json."*
 
 > Better completion for `npm`
-
-<img src="demo.gif" width="690">
 
 * Makes `npm install` recommendations from npm cache
 * Makes `npm uninstall` recommendations from `dependencies`/`devDependencies`
 * Shows detailed information on script contents for `npm run`
 * Falls back to default npm completions if we don't have anything better
 
-## Installation
+### [`strykelang`](https://github.com/MenkeTechnologies/strykelang) &middot; [`zshrs`](https://github.com/MenkeTechnologies/zshrs) · [`MenkeTechnologiesMeta`](https://github.com/MenkeTechnologies/MenkeTechnologiesMeta) · [`zsh-cargo-completion`](https://github.com/MenkeTechnologies/zsh-cargo-completion) · [`zsh-more-completions`](https://github.com/MenkeTechnologies/zsh-more-completions) · [`zpwr`](https://github.com/MenkeTechnologies/zpwr)
 
-## Install for Zinit
+---
+
+## Table of Contents
+
+- [\[0x00\] Installation](#0x00-installation)
+- [\[0x01\] Install for Zinit](#0x01-install-for-zinit)
+- [\[0x02\] Related](#0x02-related)
+- [\[0xFF\] License](#0xff-license)
+
+---
+
+## [0x00] Installation
+
+## [0x01] Install for Zinit
 > `~/.zshrc`
 ```sh
 source "$HOME/.zinit/bin/zinit.zsh"
@@ -69,11 +94,11 @@ Then source it in your `.zshrc`
 source ~/.zsh-better-npm-completion/zsh-better-npm-completion.plugin.zsh
 ```
 
-## Related
+## [0x02] Related
 
 - [`zsh-nvm`](https://github.com/lukechilds/zsh-nvm) - Zsh plugin for installing, updating and loading `nvm`
 - [`gifgen`](https://github.com/lukechilds/gifgen) - Simple high quality GIF encoding 
 
-## License
+## [0xFF] License
 
 MIT © Luke Childs
