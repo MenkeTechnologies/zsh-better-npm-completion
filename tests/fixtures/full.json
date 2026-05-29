@@ -1,0 +1,16 @@
+{
+  "name": "fixture",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "tsc -p .",
+    "test": "jest"
+  },
+  "dependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "prod-only-pkg": "1.0.0"
+  },
+  "devDependencies": {
+    "dev-only-pkg": "2.0.0"
+  }
+}

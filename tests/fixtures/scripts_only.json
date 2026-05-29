@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "build": "tsc -p .",
+    "test": "jest --coverage",
+    "dev": "vite"
+  }
+}
