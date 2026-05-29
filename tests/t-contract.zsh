@@ -49,3 +49,41 @@
     done
     assert "$missing" is_empty
 }
+
+#--------------------------------------------------------------
+# Round 2: npm-completion routing pins
+#--------------------------------------------------------------
+
+@test 'src/_npm is the documented completion file' {
+    # Pin: the completion lives at src/_npm; a future re-layout
+    # (e.g. moving to completions/ or _npm at root) would silently
+    # break fpath augmentation unless the directory + filename stay.
+    [[ -f "$pluginDir/src/_npm" ]]
+    assert $state equals 0
+}
+
+@test '_npm declares #compdef npm in its shebang line' {
+    # Single `#compdef <cmd>` line registers the completion. The
+    # file may bind multiple commands (`npm pnpm`); pin that `npm`
+    # is among them.
+    local first
+    first=$(head -1 "$pluginDir/src/_npm")
+    [[ "$first" == "#compdef "*npm* ]]
+    assert $state equals 0
+}
+
+@test 'plugin augments fpath with src/ relative path (plugin-manager portable)' {
+    local body
+    body=$(cat "$pluginDir/zsh-better-npm-completion.plugin.zsh")
+    assert "$body" contains 'fpath'
+    assert "$body" contains 'src'
+}
+
+@test 'plugin self-locates via 0=\${${0:#}/...} pattern (zinit / antigen safe)' {
+    # The plugin self-resolves its own path; pin presence so a
+    # future minimal-deps refactor doesn't drop the resolution
+    # logic and break plugin-manager installs.
+    local body
+    body=$(cat "$pluginDir/zsh-better-npm-completion.plugin.zsh")
+    assert "$body" contains 'ZSH_ARGZERO'
+}
