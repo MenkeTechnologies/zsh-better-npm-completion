@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="zsh-better-npm-completion — Engineering report. Cache-aware npm install + dep-aware npm uninstall + script-rich npm run completion for zsh. 157 zsh lines (4-line entry + 153-line _npm), single compdef registered against npm + pnpm, 46 zunit @test blocks across 6 t-*.zsh files, 4 package.json fixtures, walk-up dir search for package.json, _retrieve_cache / _store_cache memoization over npm search.">
+  <title>zsh-better-npm-completion &mdash; Engineering Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&amp;family=Share+Tech+Mono&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="hud-static.css">
+  <link rel="stylesheet" href="tutorial.css">
+  <style>
+    .tutorial-main { max-width: 72rem; }
+    .stat-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(13rem,1fr));gap:0.7rem;margin:1rem 0; }
+    .stat-card { border:1px solid var(--border);border-top:3px solid var(--cyan);background:var(--bg-card);padding:0.85rem 1rem;border-radius:2px;text-align:center; }
+    .stat-card .stat-val { font-family:'Orbitron',sans-serif;font-size:26px;font-weight:900;color:var(--cyan);line-height:1.1;text-shadow:0 0 18px var(--cyan-glow); }
+    .stat-card .stat-val.accent { color:var(--accent);text-shadow:0 0 18px var(--accent-glow); }
+    .stat-card .stat-val.green  { color:var(--green);text-shadow:0 0 18px rgba(57,255,20,.3); }
+    .stat-card .stat-label { font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--text-muted);margin-top:0.45rem; }
+    .file-table { width:100%;border-collapse:collapse;margin:0.6rem 0;font-size:12px; }
+    .file-table th { background:var(--bg-secondary);color:var(--cyan);font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;text-align:left;padding:7px 10px;border:1px solid var(--border); }
+    .file-table td { padding:6px 10px;border:1px solid var(--border);color:var(--text-dim);vertical-align:middle; }
+    .file-table tr:hover td { background:var(--bg-hover); }
+    .file-table td:first-child { font-family:'Share Tech Mono',monospace;color:var(--accent-light);font-weight:600;white-space:nowrap; }
+    .file-table .num { text-align:right;font-family:'Share Tech Mono',monospace; }
+    .file-table .total-row td { background:var(--bg-secondary);font-weight:700;color:var(--text);border-top:2px solid var(--cyan); }
+    .file-table code { font-size:11px;color:var(--accent-light);background:var(--bg-primary);padding:1px 4px;border-radius:2px; }
+    .feature-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(20rem,1fr));gap:0.65rem;margin:0.8rem 0; }
+    .feature-card { border:1px solid var(--border);border-left:3px solid var(--cyan);background:var(--bg-card);padding:0.7rem 1rem;border-radius:2px; }
+    .feature-card h4 { font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);margin:0 0 0.3rem; }
+    .feature-card p { margin:0;font-size:11px;color:var(--text-dim);line-height:1.55; }
+    .feature-card code { font-size:10.5px;color:var(--accent-light);background:var(--bg-primary);padding:1px 4px;border-radius:2px; }
+    .section-rule { border:none;border-top:1px dashed var(--border);margin:1.8rem 0; }
+  </style>
+</head>
+<body>
+  <div class="app tutorial-app" id="reportApp">
+    <div class="crt-scanline" id="crtH" aria-hidden="true"></div>
+    <div class="crt-scanline-v" id="crtV" aria-hidden="true"></div>
+
+    <header class="tutorial-header">
+      <div class="tutorial-header-inner">
+        <div>
+          <h1 class="tutorial-brand">// ZSH-BETTER-NPM-COMPLETION &mdash; ENGINEERING REPORT</h1>
+          <nav class="tutorial-crumbs" aria-label="Breadcrumb">
+            <span class="current">Engineering Report</span>
+            <span class="sep">/</span>
+            <a href="index.html">Docs</a>
+            <span class="sep">/</span>
+            <a href="https://github.com/MenkeTechnologies/zsh-better-npm-completion" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <span class="sep">/</span>
+            <a href="https://github.com/MenkeTechnologies/zpwr" target="_blank" rel="noopener noreferrer">zpwr</a>
+            <span class="sep">/</span>
+            <a href="https://github.com/MenkeTechnologies/MenkeTechnologiesMeta" target="_blank" rel="noopener noreferrer">Meta</a>
+          </nav>
+          <p style="margin:0.35rem 0 0;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:0.03em;opacity:0.75;">
+            <code>#compdef npm pnpm</code> &middot; <code>npm i &lt;tab&gt;</code> from <code>~/.npm/</code> cache &middot; <code>npm uninstall &lt;tab&gt;</code> from <code>dependencies</code> + <code>devDependencies</code> &middot; <code>npm run &lt;tab&gt;</code> with script bodies
+          </p>
+        </div>
+        <div class="tutorial-toolbar">
+          <button type="button" class="btn btn-secondary" id="btnTheme" title="Toggle light/dark">Theme</button>
+          <button type="button" class="btn btn-secondary active" id="btnCrt" title="CRT scanline overlay">CRT</button>
+          <button type="button" class="btn btn-secondary active" id="btnNeon" title="Neon border pulse">Neon</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="tutorial-main">
+
+      <h2 class="tutorial-title"><span class="step-hash">&gt;_</span>EXECUTIVE SUMMARY</h2>
+      <p class="tutorial-subtitle">
+        <strong>zsh-better-npm-completion</strong> intercepts <code>npm</code> and <code>pnpm</code> tab-completion with three context-aware completers. <code>npm install &lt;tab&gt;</code> recommends from the local <code>~/.npm/</code> on-disk cache (or fires <code>npm search</code> with <code>_retrieve_cache</code> / <code>_store_cache</code> memoization when the prefix is 2+ chars). <code>npm uninstall &lt;tab&gt;</code> reads the nearest <code>package.json</code> via a walk-up directory search and emits the union of its <code>dependencies</code> + <code>devDependencies</code> keys. <code>npm run &lt;tab&gt;</code> emits every script in <code>scripts</code> alongside its literal body as the completion description (so the user sees what each script runs before pressing <kbd>Enter</kbd>). For anything else (<code>npm publish</code>, <code>npm version</code>, <code>npm whoami</code>, ...), it falls through to npm's own bundled completion. Total surface: <strong>157 zsh lines</strong> &mdash; a 4-line entry + a 153-line <code>_npm</code>. Pinned by <strong>46 <code>@test</code> blocks</strong> across <strong>6 zunit files</strong>, including <strong>4 package.json fixtures</strong> covering scripts-only, deps-only, mixed, and full shapes.
+      </p>
+
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val">157</div><div class="stat-label">Zsh Lines</div></div>
+        <div class="stat-card"><div class="stat-val">153</div><div class="stat-label">_npm Lines</div></div>
+        <div class="stat-card"><div class="stat-val green">46</div><div class="stat-label">@test Blocks (zunit)</div></div>
+        <div class="stat-card"><div class="stat-val">6</div><div class="stat-label">Test Files</div></div>
+        <div class="stat-card"><div class="stat-val accent">4</div><div class="stat-label">Fixture package.json</div></div>
+        <div class="stat-card"><div class="stat-val">2</div><div class="stat-label">Compdef Targets (npm/pnpm)</div></div>
+        <div class="stat-card"><div class="stat-val">3</div><div class="stat-label">Custom Completers</div></div>
+        <div class="stat-card"><div class="stat-val">8</div><div class="stat-label">Helper Fns</div></div>
+      </div>
+
+      <hr class="section-rule">
+
+      <h2 class="tutorial-title"><span class="step-hash">~</span>ARCHITECTURE</h2>
+      <p class="tutorial-subtitle">Smallest of the five MenkeTechnologies zsh-plugin reports &mdash; total surface is one tiny entry + one self-contained compdef file.</p>
+
+      <table class="file-table">
+        <thead><tr><th>File</th><th class="num">Lines</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>zsh-better-npm-completion.plugin.zsh</code></td>
+            <td class="num">4</td>
+            <td>The smallest plugin entry in the umbrella. Runs the Zsh Plugin Standard <code>0=</code> path header, then prepends <code>${0:h}/src</code> to <code>fpath</code>. No aliases, no widgets, no <code>setopt</code>, no <code>autoload</code> &mdash; <code>compinit</code> does the rest.</td>
+          </tr>
+          <tr>
+            <td><code>src/_npm</code></td>
+            <td class="num">153</td>
+            <td>The entire completion. Starts with <code>#compdef npm pnpm</code> (single file registers both binaries). Top-level dispatcher <code>_npm</code> case-switches on <code>$words[2]</code>: <code>i</code> / <code>install</code> &rarr; <code>__zbnc_npm_install_completion</code>; <code>r</code> / <code>uninstall</code> &rarr; <code>__zbnc_npm_uninstall_completion</code>; <code>run</code> &rarr; <code>__zbnc_npm_run_completion</code>; default &rarr; <code>__zbnc_default_npm_completion</code> (which shells out to <code>npm completion</code> for the canonical surface). Helper functions: <code>__zbnc_npm_command_arg</code>, <code>__zbnc_recursively_look_for</code> (walk-up dir search), <code>__zbnc_get_package_json_property_object</code> (sed-based JSON section extractor), <code>__zbnc_get_package_json_property_object_keys</code>, <code>__zbnc_parse_package_json_for_script_suggestions</code>, <code>__zbnc_parse_package_json_for_deps</code>.</td>
+          </tr>
+          <tr class="total-row">
+            <td>Total source</td>
+            <td class="num">157</td>
+            <td>2 files &middot; zero external runtime deps</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <hr class="section-rule">
+
+      <h2 class="tutorial-title"><span class="step-hash">#</span>TEST COVERAGE</h2>
+      <p class="tutorial-subtitle"><strong>46</strong> <code>@test</code> blocks across <strong>6</strong> zunit files, plus 4 <code>tests/fixtures/*.json</code> mock <code>package.json</code> files driving the parser.</p>
+
+      <table class="file-table">
+        <thead><tr><th>File</th><th class="num">Tests</th><th>Pins</th></tr></thead>
+        <tbody>
+          <tr><td><code>t-plugin.zsh</code></td><td class="num">21</td><td>Plugin + completion contract pins. fpath augmentation uses <code>${0:h}/src</code>; <code>#compdef npm pnpm</code> as the literal first line; the package.json parser correctly extracts keys from each of the 4 fixture files; <code>npm install</code> / <code>uninstall</code> / <code>run</code> dispatch to the correct internal completer based on <code>$words[2]</code>.</td></tr>
+          <tr><td><code>t-syntax.zsh</code></td><td class="num">2</td><td><code>zsh -n</code> over plugin entry + <code>_npm</code>.</td></tr>
+          <tr><td><code>t-contract.zsh</code></td><td class="num">7</td><td>Plugin shape pins: entrypoint stem matches dir basename; entrypoint parses; every <code>_*</code> file leads with <code>#compdef</code>; entry is shorter than 20 lines (catches accidental config-bloat); fpath augmentation runs at source time, not in a function.</td></tr>
+          <tr><td><code>t-contract2.zsh</code></td><td class="num">6</td><td>fpath uses <code>${0:h}/src</code> (plugin-manager portable); compdef target line includes both <code>npm</code> AND <code>pnpm</code>; default fallback calls <code>__zbnc_default_npm_completion</code>; ZSH Plugin Standard header present.</td></tr>
+          <tr><td><code>t-contract3.zsh</code></td><td class="num">5</td><td>Zinit install path; <code>nocompile</code> ice honored; no <code>compinit</code> call inside the plugin (defer to the user's <code>compinit</code>).</td></tr>
+          <tr><td><code>t-contract4.zsh</code></td><td class="num">5</td><td>OMZ install path; double-source is idempotent; no side effects on first source (no <code>setopt</code>, no <code>autoload</code>, no <code>typeset</code>).</td></tr>
+          <tr class="total-row"><td>Total</td><td class="num">46</td><td>6 zunit files &middot; 4 package.json fixtures</td></tr>
+        </tbody>
+      </table>
+
+      <p style="margin-top:0.5rem;font-size:11px;color:var(--text-muted);">Fixtures: <code>tests/fixtures/scripts_only.json</code> (a <code>scripts</code> block, no deps); <code>tests/fixtures/prod_and_dev.json</code> (split <code>dependencies</code> + <code>devDependencies</code>); <code>tests/fixtures/scripts_and_deps.json</code> (both); <code>tests/fixtures/full.json</code> (every npm package.json field).</p>
+
+      <hr class="section-rule">
+
+      <h2 class="tutorial-title"><span class="step-hash">/</span>INTEGRATION</h2>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>Zinit (recommended)</h4>
+          <p><code>zinit ice lucid nocompile</code><br><code>zinit load MenkeTechnologies/zsh-better-npm-completion</code><br><code>nocompile</code> is important &mdash; without it, <code>${0:h}/src</code> would resolve to the compiled <code>.zwc</code> path instead of the on-disk <code>src/</code>.</p>
+        </div>
+        <div class="feature-card">
+          <h4>npm + pnpm in one compdef</h4>
+          <p><code>#compdef npm pnpm</code> on line 1 of <code>src/_npm</code>. compinit registers the same <code>_npm</code> dispatcher for both binaries &mdash; <code>pnpm install</code>, <code>pnpm uninstall</code>, <code>pnpm run</code> all benefit from the same script-aware / dep-aware completion logic.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Walk-up <code>package.json</code> search</h4>
+          <p><code>__zbnc_recursively_look_for "package.json"</code> walks <code>$PWD</code> up to <code>/</code> looking for the file. Same behavior as <code>npm</code> itself &mdash; the completion works whether the user is in the package root or a deeply nested subdirectory.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Fallback to <code>npm completion</code></h4>
+          <p>Anything outside the 3 custom branches falls through to <code>__zbnc_default_npm_completion</code>, which shells out to <code>npm completion -- "${words[@]}"</code>. The user never loses npm's bundled completion behavior for subcommands the custom path doesn't handle.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Cache memoization on <code>npm search</code></h4>
+          <p>Each <code>npm search $PREFIX</code> result is keyed as <code>npm_${PREFIX}_cache</code> via <code>_retrieve_cache</code> / <code>_store_cache</code>. First <kbd>TAB</kbd> against a 2+ char prefix fires the search; subsequent <kbd>TAB</kbd>s on the same prefix hit the cache. TTL is governed by <code>zstyle ':completion::complete:*' use-cache yes</code>.</p>
+        </div>
+        <div class="feature-card">
+          <h4>No <code>compinit</code> inside the plugin</h4>
+          <p>Deliberately. <code>compinit</code> is the user's responsibility (and most modern plugin managers handle it). The plugin just adds to <code>fpath</code> and lets the user-level <code>compinit</code> pick up <code>_npm</code> on the next prompt.</p>
+        </div>
+      </div>
+
+      <hr class="section-rule">
+
+      <h2 class="tutorial-title"><span class="step-hash">!</span>DESIGN DECISIONS</h2>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>sed JSON parser, not <code>jq</code> dependency</h4>
+          <p><code>__zbnc_get_package_json_property_object</code> uses two <code>sed</code> calls to extract the <code>scripts</code> / <code>dependencies</code> / <code>devDependencies</code> blocks. Costs the plugin some robustness against pathological JSON formatting (one-line collapsed JSON would defeat it), gains it zero external-dependency installs &mdash; the plugin works in CI sandboxes that have only npm + zsh and nothing else. The 4 fixture files in <code>tests/fixtures/</code> pin the parser against the common shapes.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Script body as completion description</h4>
+          <p>npm's bundled completion shows script names. zsh-better-npm-completion shows <em>"name &mdash; literal body"</em> via <code>_describe</code>. <code>npm run build &lt;tab&gt;</code> reveals what the script actually runs (e.g. <code>build &mdash; webpack --mode production</code>) BEFORE the user invokes it &mdash; catches the "which one is the linter, which one is the typechecker" question every time.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Cache prefix length floor</h4>
+          <p><code>(( $#PREFIX >= 2 ))</code> &mdash; below 2 chars, the install completer skips <code>npm search</code> entirely and only emits the <code>~/.npm/</code> cache directory contents. Prevents 50k+ candidate dumps on <code>npm i &lt;tab&gt;</code> with no prefix.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Flag-prefix guard</h4>
+          <p><code>[[ $PREFIX == -* ]] &amp;&amp; return</code> at the top of <code>__zbnc_npm_install_completion</code>. When the user is mid-flag (<code>npm i --save-d</code>), the completer doesn't try to interpret the flag as a package name and doesn't fire <code>npm search</code>. Falls through to default.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Union of <code>dependencies</code> + <code>devDependencies</code></h4>
+          <p><code>npm uninstall</code> completion offers BOTH prod and dev deps. Users don't have to remember which list a package came from &mdash; <code>npm uninstall &lt;tab&gt;</code> shows every dep that could plausibly be removed.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Tiny plugin entry &mdash; 4 lines</h4>
+          <p>The entry doesn't even define functions. The compsys file under <code>src/_npm</code> is fully self-contained. Sourcing the plugin is constant-time regardless of npm install size; the heavy work happens inside <code>compinit</code> when the user actually requests completion.</p>
+        </div>
+      </div>
+
+      <hr class="section-rule">
+
+      <h2 class="tutorial-title"><span class="step-hash">@</span>FOOTPRINT</h2>
+      <ul style="font-size:12px;color:var(--text-dim);line-height:1.7;">
+        <li><strong>Disk</strong>: 2 source files (4-line entry + 153-line compdef). No shipped binaries.</li>
+        <li><strong>Memory</strong>: One additional <code>_npm</code> registration in <code>$_comps</code>. No additional globals, no associative arrays, no widget closures.</li>
+        <li><strong>Startup cost</strong>: 4-line parse of the entry, one <code>fpath</code> prepend. Sub-millisecond at any sane disk speed.</li>
+        <li><strong>Runtime cost</strong>: One <code>compinit</code> dispatch per <kbd>TAB</kbd>. Custom branches read <code>~/.npm/</code> and/or the nearest <code>package.json</code>; default branch shells out to <code>npm completion</code> (one subprocess).</li>
+        <li><strong>External tools</strong>: <code>npm</code>, <code>sed</code>, <code>cat</code>, <code>cut</code> &mdash; all POSIX-floor or universally-shipped.</li>
+      </ul>
+
+    </main>
+
+    <footer style="text-align:center;padding:2rem;font-size:10px;color:var(--text-muted);font-family:'Orbitron',sans-serif;letter-spacing:2px;">
+      ZSH-BETTER-NPM-COMPLETION ENGINEERING REPORT &middot; 157 ZSH LINES &middot; 46 ZUNIT TESTS &middot; 4 FIXTURES &middot; 1 COMPDEF (npm + pnpm) &middot; 3 CUSTOM COMPLETERS &middot; CACHE-AWARE INSTALL &middot; DEP-AWARE UNINSTALL &middot; MENKETECHNOLOGIES
+    </footer>
+  </div>
+
+  <script>
+    const html = document.documentElement;
+    const btnTheme = document.getElementById('btnTheme');
+    const btnCrt = document.getElementById('btnCrt');
+    const btnNeon = document.getElementById('btnNeon');
+    const crtH = document.getElementById('crtH');
+    const crtV = document.getElementById('crtV');
+    btnTheme?.addEventListener('click', () => {
+      html.setAttribute('data-theme', html.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+    });
+    btnCrt?.addEventListener('click', () => {
+      btnCrt.classList.toggle('active');
+      const on = btnCrt.classList.contains('active');
+      if (crtH) crtH.style.display = on ? '' : 'none';
+      if (crtV) crtV.style.display = on ? '' : 'none';
+    });
+    btnNeon?.addEventListener('click', () => {
+      btnNeon.classList.toggle('active');
+      document.querySelector('.app')?.classList.toggle('neon-off');
+    });
+  </script>
+</body>
+</html>
