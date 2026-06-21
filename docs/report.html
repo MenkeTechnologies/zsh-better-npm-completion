@@ -82,7 +82,7 @@
         <div class="stat-card"><div class="stat-val accent">4</div><div class="stat-label">Fixture package.json</div></div>
         <div class="stat-card"><div class="stat-val">2</div><div class="stat-label">Compdef Targets (npm/pnpm)</div></div>
         <div class="stat-card"><div class="stat-val">3</div><div class="stat-label">Custom Completers</div></div>
-        <div class="stat-card"><div class="stat-val">8</div><div class="stat-label">Helper Fns</div></div>
+        <div class="stat-card"><div class="stat-val">6</div><div class="stat-label">Helper Fns</div></div>
       </div>
 
       <hr class="section-rule">
@@ -113,6 +113,37 @@
 
       <hr class="section-rule">
 
+      <h2 class="tutorial-title"><span class="step-hash">&gt;</span>DISPATCH &amp; DATA FLOW</h2>
+      <p class="tutorial-subtitle">Every TAB enters <code>_npm</code>, which sets <code>local custom_completion=false</code>, switches on <code>$words[2]</code>, and either runs a custom completer (which sets <code>custom_completion=true</code>) or falls through to <code>__zbnc_default_npm_completion</code>.</p>
+
+      <table class="file-table">
+        <thead><tr><th>Subcommand</th><th>Completer</th><th>Source &amp; guards</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>i</code> / <code>install</code></td>
+            <td><code>__zbnc_npm_install_completion</code></td>
+            <td>Returns early on <code>$PREFIX == -*</code> (mid-flag). For <code>$#PREFIX &gt;= 2</code>, runs <code>npm search --no-progress $PREFIX</code>, memoised under <code>npm_${PREFIX}_cache</code> via <code>_retrieve_cache</code>/<code>_store_cache</code>, surfaced with <code>_describe -t npm-search</code>. Always also offers the <code>~/.npm/</code> dir entries (<code>"$HOME/".npm/*(/:t)</code>) via <code>_wanted npm-cache &hellip; compadd -Q</code>.</td>
+          </tr>
+          <tr>
+            <td><code>r</code> / <code>uninstall</code></td>
+            <td><code>__zbnc_npm_uninstall_completion</code></td>
+            <td>Returns when <code>$words[3]</code> is <code>-g</code>/<code>--global</code> (defer to default for global modules). Walks up for <code>package.json</code>; offers the union of <code>dependencies</code> + <code>devDependencies</code> keys via <code>_values</code>.</td>
+          </tr>
+          <tr>
+            <td><code>run</code></td>
+            <td><code>__zbnc_npm_run_completion</code></td>
+            <td>Only fires on <code>$#words == 3</code>. Walks up for <code>package.json</code>; parses the <code>scripts</code> block into <code>name : body</code> candidates and surfaces them with <code>_describe</code> so the script body shows as the description.</td>
+          </tr>
+          <tr>
+            <td>everything else</td>
+            <td><code>__zbnc_default_npm_completion</code></td>
+            <td>Shells out to <code>npm completion -- "${words[@]}"</code> with <code>COMP_CWORD</code>/<code>COMP_LINE</code>/<code>COMP_POINT</code> set, piping the result through <code>compadd</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <hr class="section-rule">
+
       <h2 class="tutorial-title"><span class="step-hash">#</span>TEST COVERAGE</h2>
       <p class="tutorial-subtitle"><strong>46</strong> <code>@test</code> blocks across <strong>6</strong> zunit files, plus 4 <code>tests/fixtures/*.json</code> mock <code>package.json</code> files driving the parser.</p>
 
@@ -129,7 +160,7 @@
         </tbody>
       </table>
 
-      <p style="margin-top:0.5rem;font-size:11px;color:var(--text-muted);">Fixtures: <code>tests/fixtures/scripts_only.json</code> (a <code>scripts</code> block, no deps); <code>tests/fixtures/prod_and_dev.json</code> (split <code>dependencies</code> + <code>devDependencies</code>); <code>tests/fixtures/scripts_and_deps.json</code> (both); <code>tests/fixtures/full.json</code> (every npm package.json field).</p>
+      <p style="margin-top:0.5rem;font-size:11px;color:var(--text-muted);">Fixtures: <code>tests/fixtures/scripts_only.json</code> (a <code>scripts</code> block, no deps); <code>tests/fixtures/prod_and_dev.json</code> (split <code>dependencies</code> + <code>devDependencies</code>); <code>tests/fixtures/scripts_and_deps.json</code> (both); <code>tests/fixtures/full.json</code> (<code>name</code> + <code>version</code> + <code>scripts</code> + <code>dependencies</code> + <code>devDependencies</code> together).</p>
 
       <hr class="section-rule">
 
